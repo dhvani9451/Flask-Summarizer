@@ -6,8 +6,13 @@ import os
 app = Flask(__name__)
 
 # Configure Gemini API Key (Read from Environment Variable)
-GEMINI_API_KEY = os.getenv("AIzaSyAIS2oLi1uxW6BSnCp6pOUT2u3vXVz2JMs")  # Set this in Render
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Set this in Render
 genai.configure(api_key=GEMINI_API_KEY)
+
+# Homepage Route
+@app.route("/", methods=["GET"])
+def home():
+    return "Flask Summarizer API is running!", 200
 
 # Define the summarization endpoint
 @app.route("/summarize", methods=["POST"])
