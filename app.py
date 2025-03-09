@@ -14,7 +14,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Set this in Render
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Homepage Route
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["POST"])
 def home():
     return "Flask Summarizer API is running!", 200
 
