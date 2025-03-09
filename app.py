@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Import CORS
 import google.generativeai as genai
 import os
 
 # Initialize Flask app
 app = Flask(__name__)
+
+# Enable CORS for all routes
+CORS(app)  # This allows requests from any origin (e.g., frontend on localhost)
 
 # Configure Gemini API Key (Read from Environment Variable)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Set this in Render
