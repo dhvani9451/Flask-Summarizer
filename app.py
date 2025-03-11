@@ -13,7 +13,7 @@ genai.configure(api_key="AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM")
 
 def generate_summary(text):
     try:
-        model = genai.GenerativeModel("gemini-pro")
+        model = genai.GenerativeModel("models/gemini-2.0-flash")
         prompt = f"""
         Summarize the following text into concise bullet points while ensuring the summary length is around 4/10th of the original text:
 
