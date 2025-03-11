@@ -8,7 +8,7 @@ CORS(app)  # Enable CORS for frontend integration
 
 # Configure Gemini AI API key
 GEMINI_API_KEY = "AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM"
-genai.configure(api_key=AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM)
+genai.configure(api_key="AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM")
 
 # Function to generate a summary
 def generate_summary(text):
