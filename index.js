@@ -52,7 +52,7 @@ function handleFileUpload() {
 async function sendToAPI(extractedText) {
     console.log("📤 Sending extracted text to API...");
     try {
-        let response = await fetch("https://your-deployed-url.onrender.com/generate-ppt", {  // 🔗 Replace with actual API URL
+        let response = await fetch("https://flask-summarizer-kkmn.onrender.com/generate-ppt", {  // ✅ Replace with actual Render API URL
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ text: extractedText })
