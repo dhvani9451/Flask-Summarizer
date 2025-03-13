@@ -1,4 +1,5 @@
 Flask
+Flask-CORS
 gunicorn
 google-generativeai
 python-pptx
