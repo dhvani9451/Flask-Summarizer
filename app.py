@@ -9,7 +9,7 @@ from generate_ppt import create_presentation, clean_and_structure_text  # ✅ Im
 API_KEY = os.getenv("AIzaSyDLiZW7r215H5zhxaeLGM7bGYJ_CGFHDcg")
 if not API_KEY:
     raise ValueError("❌ Error: GEMINI_API_KEY is not set in environment variables.")
-genai.configure(api_key=API_KEY)
+genai.configure(api_key="AIzaSyDLiZW7r215H5zhxaeLGM7bGYJ_CGFHDcg")
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)  # ✅ Allow all origins
