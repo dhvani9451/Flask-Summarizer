@@ -1,48 +1,54 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask import Flask, request, send_file
+from pptx import Presentation
 import google.generativeai as genai
+import io
 
 app = Flask(__name__)
 
-# Allow CORS for all domains and methods
-CORS(app, resources={r"/*": {"origins": "*"}})
+# Configure Gemini API
+genai.configure(api_key="AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM")  # Replace with your actual Gemini API Key
 
-# Configure Gemini AI API key
-GEMINI_API_KEY = "AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM"
-genai.configure(api_key="AIzaSyBr12Wqh__1rPbCqwvyNFyNLgd3yDrniCM")
-
+#  Function to generate AI summary using Gemini
 def generate_summary(text):
-    try:
-        model = genai.GenerativeModel("models/gemini-2.0-flash")
-        prompt = f"""
-        Summarize the following text into concise bullet points while ensuring the summary length is around 4/10th of the original text:
+    model = genai.GenerativeModel("models/gemini-1.5-pro-002")
+    response = model.generate_content(text)
+    return response.text if response.text else "Summary not available."
 
-        {text}
+#  Function to create PowerPoint presentation
+def create_presentation(summary):
+    prs = Presentation()
 
-        Output the summary in bullet points.
-        """
-        response = model.generate_content(prompt)
-        summary = response.text.strip()
-        summary = "\n".join(["• " + line.strip() for line in summary.split("\n") if line.strip()])
-        return summary
-    except Exception as e:
-        return f"Error generating summary: {str(e)}"
+    # Title Slide
+    slide = prs.slides.add_slide(prs.slide_layouts[0])
+    slide.shapes.title.text = "Generated Summary"
+    slide.placeholders[1].text = "Created by AI Summarizer (Gemini)"
 
-@app.route('/summarize', methods=['POST'])
-def summarize():
-    try:
-        data = request.get_json()
-        text = data.get("text", "")
+    # Content Slide
+    slide = prs.slides.add_slide(prs.slide_layouts[1])
+    slide.shapes.title.text = "Summary Key Points"
+    text_frame = slide.placeholders[1].text_frame
+    for line in summary.split("\n"):
+        p = text_frame.add_paragraph()
+        p.text = "• " + line.strip()
 
-        if not text.strip():
-            return jsonify({"error": "No text provided"}), 400
+    # Save PPT to memory & return
+    ppt_io = io.BytesIO()
+    prs.save(ppt_io)
+    ppt_io.seek(0)
+    return ppt_io
 
-        summary = generate_summary(text)
+@app.route('/generate-ppt', methods=['POST'])
+def generate_ppt():
+    data = request.json
+    text = data.get("text", "")
+    
+    if not text:
+        return {"error": "No text provided"}, 400
 
-        return jsonify({"summary": summary}), 200
+    summary = generate_summary(text)
+    ppt_file = create_presentation(summary)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    return send_file(ppt_file, as_attachment=True, download_name="Generated_Summary_Presentation.pptx")
 
 if __name__ == '__main__':
     app.run(debug=True)
