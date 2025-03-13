@@ -1,3 +1,7 @@
 Flask
+gunicorn
 google-generativeai
 python-pptx
+requests
+werkzeug
+python-dotenv
