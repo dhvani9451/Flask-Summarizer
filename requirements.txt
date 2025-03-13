@@ -6,3 +6,6 @@ python-pptx
 requests
 werkzeug
 python-dotenv
+pdfminer.six
+
+
