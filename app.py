@@ -6,7 +6,7 @@ import google.generativeai as genai
 from generate_ppt import create_presentation  # ✅ Import PPT generation function
 
 # ✅ Configure Gemini API
-genai.configure(api_key=os.getenv("AIzaSyDLiZW7r215H5zhxaeLGM7bGYJ_CGFHDcg"))
+genai.configure(api_key=os.getenv("AIzaSyC5nMYSC6oPwbIkPGWhwKfUnQLqvUf1oR4"))
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # ✅ Enable CORS for all origins
