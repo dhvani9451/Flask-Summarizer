@@ -1,0 +1,10 @@
+Flask
+Flask-CORS
+gunicorn
+google-generativeai
+python-pptx
+requests
+werkzeug
+python-dotenv
+pdfminer.six
+python-docx
