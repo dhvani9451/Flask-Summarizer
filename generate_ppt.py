@@ -83,17 +83,9 @@ def clean_text(text):
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
     # Split text into sentences based on semantic patterns
-    structured_text = []
-    current_sentence = ""
-    for word in text.split():
-        current_sentence += word + " "
-        # Check if the current word matches any of the semantic patterns
-        if any(word.lower().startswith(pattern.lower()) for pattern in PATTERNS):
-            structured_text.append(current_sentence.strip())
-            current_sentence = ""
-    # Add the last sentence if it exists
-    if current_sentence:
-        structured_text.append(current_sentence.strip())
+    pattern_regex = r'\b(?:' + '|'.join(re.escape(pattern) for pattern in PATTERNS) + r')\b'
+    sentences = re.split(pattern_regex, text)
+    structured_text = [sentence.strip() for sentence in sentences if sentence.strip()]
 
     return structured_text
 
@@ -160,7 +152,7 @@ def create_presentation(file_texts):
                 current_slide_text.append(wrapped_line)
 
                 # Add a new slide if the maximum lines per slide is reached
-                if len(current_slide_text) == max_lines_per_slide:
+                if len(current_slide_text) >= max_lines_per_slide:
                     add_slide(prs, f"Key Points - {filename}", current_slide_text)
                     current_slide_text = []
 
