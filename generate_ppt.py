@@ -114,18 +114,17 @@ def add_slide(prs, title, content):
     text_frame.clear()
 
     # Add bullet points only for new thoughts
-    for i, paragraph in enumerate(content):
+    for paragraph in content:
         p = text_frame.add_paragraph()
         p.text = paragraph
         p.font.size = Pt(18)
         p.space_after = Pt(10)
 
-        # Apply bullet only if it's a new thought (matches semantic patterns)
-        if i == 0 or any(paragraph.strip().lower().startswith(pattern.lower()) for pattern in PATTERNS):
+        # Apply bullet only if the paragraph matches semantic patterns
+        if any(paragraph.strip().lower().startswith(pattern.lower()) for pattern in PATTERNS):
             p.level = 0  # PowerPoint's default bullet
         else:
-            p.level = 1  # No bullet for wrapped lines or continuous text
-
+            p.level = 1  # Indent without a bullet for non-new thoughts
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
     # Use a template if available
