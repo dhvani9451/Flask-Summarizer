@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // ✅ Typewriter effect JS code
 var TxtType = function(el, toRotate, period) {
     this.toRotate = toRotate;
