@@ -8,5 +8,3 @@ werkzeug
 python-dotenv
 pdfminer.six
 python-docx
-
-
