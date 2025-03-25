@@ -45,13 +45,14 @@ def add_slide(prs, title, content):
         p.font.size = Pt(16)  # Slightly smaller font for better fit
         p.space_after = Pt(8)  # Adjust spacing for readability
 
-        # ✅ Apply bullet only if:
+        # Apply bullet only if:
         # 1. It's the first line of the slide, or
         # 2. The previous line ended with a full stop (new thought)
-        if i == 0 or content[i - 1].endswith("."):
-            p.level = 0  # ✅ PowerPoint's default bullet
+        if i == 0 or (i > 0 and content[i - 1].strip().endswith(".")):
+            p.level = 0  # PowerPoint's default bullet
         else:
-            p.level = 1  # ✅ No bullet for wrapped lines or continuous text
+            p.level = 1  # No bullet for wrapped lines or continuous text
+
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
