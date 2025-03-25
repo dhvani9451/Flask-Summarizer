@@ -10,7 +10,7 @@ def clean_text(text):
     if isinstance(text, list):
         text = "\n".join(text)
 
-    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
+    # text = re.sub(r'[*#]', '', text)  # Remove unwanted characters - REMOVE THIS LINE, THIS IS THE PROBLEM
     text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
@@ -48,7 +48,7 @@ def add_slide(prs, title, content):
         # Apply bullet only if:
         # 1. It's the first line of the slide, or
         # 2. The previous line ended with a full stop (new thought)
-        if i == 0 or (i > 0 and content[i - 1].strip().endswith(".")):
+        if i == 0:
             p.level = 0  # PowerPoint's default bullet
         else:
             p.level = 1  # No bullet for wrapped lines or continuous text
