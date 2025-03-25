@@ -1,50 +1,70 @@
 from pptx import Presentation
-from pptx.util import Pt, Inches
+from pptx.util import Pt
 import io
 import textwrap
 import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text while keeping sentence breaks."""
     if isinstance(text, list):
         text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
+    text = re.sub(r'[^A-Za-z0-9.,\s\n]', '', text)  # Keep only letters, numbers, punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Split into paragraphs or thoughts based on line breaks
-    paragraphs = text.split("\n")
-    structured_text = [para.strip() for para in paragraphs if para]
+    # ✅ Preserve newlines to detect paragraph breaks
+    structured_text = re.split(r'(?<=\.)\s+', text)  # Split text only at full stops (`.`) followed by a space
 
-    return structured_text
+    return [sentence.strip() for sentence in structured_text if sentence]
 
 def add_slide(prs, title, content):
-    """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
+    """Adds a slide ensuring bullet formatting and readability."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
-    # Set slide title
     title_shape = slide.shapes.title
     title_shape.text = title
     title_shape.text_frame.paragraphs[0].font.bold = True
     title_shape.text_frame.paragraphs[0].font.size = Pt(28)
 
-    # Set slide content
     content_shape = slide.shapes.placeholders[1]
     text_frame = content_shape.text_frame
     text_frame.clear()
-    text_frame.word_wrap = True  # Enable word wrapping
 
-    # Add bullet points for each new thought
+    max_chars_per_line = 90  # ✅ Prevents text overflow
+    max_bullets_per_slide = 6  # ✅ Limits the number of bullets per slide
+
+    bullet_count = 0
+
     for paragraph in content:
+        if not paragraph.strip():  
+            continue  # ✅ Skip empty lines
+
+        wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
+
+        # ✅ First line of a paragraph gets a bullet
         p = text_frame.add_paragraph()
-        p.text = paragraph
-        p.font.size = Pt(16)  # Slightly smaller font for better fit
-        p.space_after = Pt(8)  # Adjust spacing for readability
-        p.level = 0  # PowerPoint's default bullet
+        p.text = wrapped_lines[0]  
+        p.font.size = Pt(18)
+        p.space_after = Pt(10)
+        p.level = 0  # ✅ Apply PowerPoint’s default bullet
+
+        bullet_count += 1
+
+        # ✅ If paragraph is long, break it into multiple bullets
+        for line in wrapped_lines[1:]:
+            if bullet_count >= max_bullets_per_slide:
+                return  # ✅ Stops adding bullets if the slide is full
+
+            p = text_frame.add_paragraph()
+            p.text = line  
+            p.font.size = Pt(18)
+            p.space_after = Pt(10)
+            p.level = 1  # ✅ Continuation without bullet
+
+            bullet_count += 1
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
@@ -54,37 +74,31 @@ def create_presentation(file_texts):
     else:
         prs = Presentation()
 
-    # Add Title Slide
+    # ✅ Add Title Slide
     slide_layout = prs.slide_layouts[0]  # Title Slide Layout
     slide = prs.slides.add_slide(slide_layout)
-    slide.shapes.title.text = "Vehicle Rental System - Summary Presentation"
+    slide.shapes.title.text = "Summary Presentation"
     slide.placeholders[1].text = "Created by AI PPT Generator"
 
-    max_lines_per_slide = 6  # Maximum lines per slide
-    max_chars_per_line = 80  # Maximum characters per line
+    max_lines_per_slide = 6
 
     for filename, text in file_texts.items():
         structured_text = clean_text(text)
         current_slide_text = []
 
-        # Add a Slide for Each File Title
+        # ✅ Add a Slide for Each File Title
         file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
-        file_title_slide.shapes.title.text = f"Summary of {filename}"  # More descriptive title
+        file_title_slide.shapes.title.text = f"📄 {filename}"  # Show filename as slide title
 
-        for paragraph in structured_text:
-            # Split large paragraphs into smaller chunks
-            wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
-            for wrapped_line in wrapped_lines:
-                current_slide_text.append(wrapped_line)
+        for line in structured_text:
+            current_slide_text.append(line)
 
-                # If the slide is full, add a new slide
-                if len(current_slide_text) == max_lines_per_slide:
-                    add_slide(prs, f"Key Points from {filename}", current_slide_text)
-                    current_slide_text = []
+            if len(current_slide_text) >= max_lines_per_slide:
+                add_slide(prs, f"Key Points - {filename}", current_slide_text)
+                current_slide_text = []
 
-        # Add remaining text to a new slide
         if current_slide_text:
-            add_slide(prs, f"Additional Info from {filename}", current_slide_text)
+            add_slide(prs, f"Additional Info - {filename}", current_slide_text)
 
     ppt_io = io.BytesIO()
     prs.save(ppt_io)
