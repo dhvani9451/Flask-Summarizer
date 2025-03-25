@@ -6,22 +6,21 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text while keeping sentence breaks."""
     if isinstance(text, list):
         text = "\n".join(text)
 
-    text = re.sub(r'[*#]', '', text)
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
+    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
+    text = re.sub(r'[^A-Za-z0-9.,\s\n]', '', text)  # Keep only letters, numbers, punctuation
+    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
 
-    lines = text.split(". ")
-    structured_text = [line.strip() for line in lines if line]
+    # ✅ Preserve newlines to detect paragraph breaks
+    structured_text = re.split(r'(?<=\.)\s+', text)  # Split text only at full stops (`.`) followed by a space
 
-    return structured_text
+    return [sentence.strip() for sentence in structured_text if sentence]
 
 def add_slide(prs, title, content):
-    """Adds a new slide with title and formatted content."""
+    """Adds a new slide ensuring bullet formatting and readability."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
@@ -34,21 +33,41 @@ def add_slide(prs, title, content):
     text_frame = content_shape.text_frame
     text_frame.clear()
 
-    grouped_text = []
-    for i, paragraph in enumerate(content):
-        grouped_text.append(paragraph)
+    max_chars_per_line = 90  # ✅ Prevents text overflow
+    max_bullets_per_slide = 6  # ✅ Limits the number of bullets per slide
 
-        if (i + 1) % 5 == 0 or i == len(content) - 1:  # Group every 5 lines
+    bullet_count = 0
+
+    for paragraph in content:
+        if not paragraph.strip():  
+            continue  # ✅ Skip empty lines
+
+        wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
+
+        # ✅ First line of a paragraph gets a bullet
+        p = text_frame.add_paragraph()
+        p.text = wrapped_lines[0]  
+        p.font.size = Pt(18)
+        p.space_after = Pt(10)
+        p.level = 0  # ✅ Apply PowerPoint’s default bullet
+
+        bullet_count += 1
+
+        # ✅ If paragraph is long, break it into multiple bullets
+        for line in wrapped_lines[1:]:
+            if bullet_count >= max_bullets_per_slide:
+                return  # ✅ Stops adding bullets if the slide is full
+
             p = text_frame.add_paragraph()
-            p.text = " ".join(grouped_text)
+            p.text = line  
             p.font.size = Pt(18)
             p.space_after = Pt(10)
-            p.level = 0
-            grouped_text = []
+            p.level = 1  # ✅ Continuation without bullet
+
+            bullet_count += 1
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
-    # ✅ Check if template exists, otherwise create new presentation
     template_path = "Ion.pptx"
     if os.path.exists(template_path):
         prs = Presentation(template_path)
@@ -69,16 +88,14 @@ def create_presentation(file_texts):
 
         # ✅ Add a Slide for Each File Title
         file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
-        file_title_slide.shapes.title.text = f"📄 {filename}"  # Add filename as slide title
+        file_title_slide.shapes.title.text = f"📄 {filename}"  # Show filename as slide title
 
         for line in structured_text:
-            wrapped_lines = textwrap.wrap(line, width=80)
-            for wrapped_line in wrapped_lines:
-                current_slide_text.append(wrapped_line)
+            current_slide_text.append(line)
 
-                if len(current_slide_text) == max_lines_per_slide:
-                    add_slide(prs, f"Key Points - {filename}", current_slide_text)
-                    current_slide_text = []
+            if len(current_slide_text) >= max_lines_per_slide:
+                add_slide(prs, f"Key Points - {filename}", current_slide_text)
+                current_slide_text = []
 
         if current_slide_text:
             add_slide(prs, f"Additional Info - {filename}", current_slide_text)
