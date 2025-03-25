@@ -11,12 +11,13 @@ def clean_text(text):
         text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
+    #text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
+    #text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Split into paragraphs or thoughts based on line breaks
-    paragraphs = text.split("\n")
+    # Split into paragraphs or thoughts based on full stops followed by space or newline
+    paragraphs = re.split(r'(?<=[.?!])\s+', text)  # Split by sentence endings
+
     structured_text = [para.strip() for para in paragraphs if para]
 
     return structured_text
