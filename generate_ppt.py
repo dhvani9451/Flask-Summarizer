@@ -6,17 +6,16 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text. Splits by sentence endings, bullet points, or numbered lists."""
     if isinstance(text, list):
         text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    #text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    #text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Split into paragraphs or thoughts based on full stops followed by space or newline
-    paragraphs = re.split(r'(?<=[.?!])\s+', text)  # Split by sentence endings
+    # Split by sentence endings, bullet points, or numbered lists
+    # The regex now includes patterns for common bullet points (-, *, •) and numbered lists (1., 1), etc.
+    paragraphs = re.split(r'(?<=[.?!])\s+|(?<=^[-*•]\s)|(?<=^\d+\.\s)|(?<=^\d+\)\s)', text, flags=re.MULTILINE)
 
     structured_text = [para.strip() for para in paragraphs if para]
 
