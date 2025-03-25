@@ -58,7 +58,8 @@ def add_slide(prs, title, content):
             p.level = 1
             # Explicitly remove bullet properties for subsequent items
             p.paragraph_format.bullet.type = 4 #PP_BULLET_TYPE.NONE
-            p.paragraph_format.alignment = PP_PARAGRAPH_ALIGNMENT.LEFT #adjust to left alignment
+            #text_frame.paragraphs[i].alignment = PP_PARAGRAPH_ALIGNMENT.LEFT #adjust to left alignment
+            p.alignment = PP_PARAGRAPH_ALIGNMENT.LEFT #adjust to left alignment
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
