@@ -6,17 +6,15 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
     if isinstance(text, list):
         text = "\n".join(text)
 
-    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
-    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
+    text = re.sub(r'[*#]', '', text)
+    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
 
-    # Split into paragraphs or thoughts based on line breaks
-    paragraphs = text.split("\n")
+    # Split on headings followed by a colon and some text
+    paragraphs = re.split(r'([A-Za-z\s]+:.*)', text)
     structured_text = [para.strip() for para in paragraphs if para]
 
     return structured_text
@@ -38,13 +36,18 @@ def add_slide(prs, title, content):
     text_frame.clear()
     text_frame.word_wrap = True  # Enable word wrapping
 
-    # Add bullet points for each new thought
-    for paragraph in content:
+    # Improved bullet point logic
+    for i, paragraph in enumerate(content):
         p = text_frame.add_paragraph()
         p.text = paragraph
-        p.font.size = Pt(16)  # Slightly smaller font for better fit
-        p.space_after = Pt(8)  # Adjust spacing for readability
-        p.level = 0  # PowerPoint's default bullet
+        p.font.size = Pt(16)
+        p.space_after = Pt(8)
+
+        # Apply bullet point only if it's a numbered list item or the first paragraph or paragraph starting with keywords.
+        if re.match(r"^\d+\.", paragraph) or i == 0 or paragraph.lower().startswith(("strengths", "areas for improvement")): #starts with number . or is first paragraph or is a heading
+            p.level = 0  # Apply bullet point (PowerPoint's default bullet)
+        else:
+            p.level = 1 #Indent it instead
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
