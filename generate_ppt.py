@@ -6,12 +6,13 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text while retaining essential punctuation."""
     if isinstance(text, list):
         text = "\n".join(text)
 
+    # Remove unwanted characters but retain essential punctuation
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
+    text = re.sub(r'[^\w\s.,:;!?\'"-]', '', text)  # Retain letters, numbers, and essential punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
@@ -75,12 +76,16 @@ def create_presentation(file_texts):
             # Split large paragraphs into smaller chunks
             wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
             for wrapped_line in wrapped_lines:
-                current_slide_text.append(wrapped_line)
+                # Split sentences based on full stops or double newlines
+                sentences = re.split(r'(?<=[.!?])\s+|\n\n', wrapped_line)
+                for sentence in sentences:
+                    if sentence.strip():  # Ensure non-empty sentences
+                        current_slide_text.append(sentence.strip())
 
-                # If the slide is full, add a new slide
-                if len(current_slide_text) == max_lines_per_slide:
-                    add_slide(prs, f"Key Points from {filename}", current_slide_text)
-                    current_slide_text = []
+                        # If the slide is full, add a new slide
+                        if len(current_slide_text) == max_lines_per_slide:
+                            add_slide(prs, f"Key Points from {filename}", current_slide_text)
+                            current_slide_text = []
 
         # Add remaining text to a new slide
         if current_slide_text:
