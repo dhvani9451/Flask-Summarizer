@@ -64,6 +64,10 @@ def create_presentation(file_texts):
     max_chars_per_line = 80  # Maximum characters per line
 
     for filename, text in file_texts.items():
+        # Debug: Print raw summary text
+        print(f"Raw summary for {filename}:")
+        print(text)
+
         structured_text = clean_text(text)
         current_slide_text = []
 
