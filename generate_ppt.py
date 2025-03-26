@@ -1,49 +1,43 @@
 from pptx import Presentation
 from pptx.util import Pt, Inches
 import io
-import textwrap
 import re
 import os
+from typing import Dict, List
 
-def clean_text(text):
-    """Cleans and structures the extracted text while preserving meaningful structure."""
+def clean_text(text: str) -> List[str]:
+    """
+    Cleans and structures text while preserving all punctuation.
+    Properly splits into bullet points at sentence boundaries and paragraphs.
+    """
     if isinstance(text, list):
         text = "\n".join(text)
 
-    # Remove markdown characters but preserve most punctuation
-    text = re.sub(r'[*#]', '', text)
-    
-    # Normalize whitespace (convert multiple spaces/tabs to single space)
-    text = re.sub(r'[ \t]+', ' ', text)
-    
-    # Normalize line breaks (convert multiple newlines to double newlines)
-    text = re.sub(r'\n\s*\n', '\n\n', text.strip())
-    
-    # Split into paragraphs based on double newlines
-    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
-    
-    # Further split long paragraphs into coherent chunks
-    structured_text = []
-    for para in paragraphs:
-        # Split at sentence boundaries if paragraph is too long
-        if len(para) > 120:
-            sentences = re.split(r'(?<=[.!?])\s+', para)
-            current_chunk = []
-            for sentence in sentences:
-                if sum(len(s) for s in current_chunk) + len(sentence) < 100:
-                    current_chunk.append(sentence)
-                else:
-                    structured_text.append(' '.join(current_chunk))
-                    current_chunk = [sentence]
-            if current_chunk:
-                structured_text.append(' '.join(current_chunk))
-        else:
-            structured_text.append(para)
-    
-    return structured_text
+    # Preserve all punctuation and normalize whitespace
+    text = re.sub(r'[ \t]+', ' ', text.strip())
+    text = re.sub(r'\n\s*\n', '\n\n', text)  # Preserve paragraph breaks
 
-def add_slide(prs, title, content):
-    """Adds a slide with proper bullet point structure."""
+    # Split into meaningful chunks for bullet points
+    chunks = []
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+
+    for para in paragraphs:
+        # Handle numbered lists (1. item 2. item)
+        if re.search(r'^\d+\.\s', para):
+            numbered_items = re.split(r'(?<=\d\.)\s', para)
+            chunks.extend([item.strip() for item in numbered_items if item.strip()])
+        else:
+            # Split at sentence boundaries while preserving punctuation
+            sentences = re.findall(r'[^.!?]+[.!?]', para)
+            if sentences:
+                chunks.extend([s.strip() for s in sentences if s.strip()])
+            else:
+                chunks.append(para)  # Fallback for text without sentence endings
+
+    return chunks
+
+def add_slide(prs: Presentation, title: str, content: List[str]):
+    """Adds a slide with proper text formatting and bullet points."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
@@ -53,68 +47,76 @@ def add_slide(prs, title, content):
     title_shape.text_frame.paragraphs[0].font.bold = True
     title_shape.text_frame.paragraphs[0].font.size = Pt(28)
 
-    # Set slide content
+    # Set content with proper text wrapping
     content_shape = slide.shapes.placeholders[1]
     text_frame = content_shape.text_frame
     text_frame.clear()
     text_frame.word_wrap = True
+    text_frame.auto_size = True  # Allow text box to expand
 
-    # Add content with bullet points only for main points
-    for paragraph in content:
+    # Configure margins to prevent overflow
+    text_frame.margin_left = Inches(0.5)
+    text_frame.margin_right = Inches(0.5)
+    text_frame.margin_top = Inches(0.5)
+    text_frame.margin_bottom = Inches(0.5)
+
+    for item in content:
         p = text_frame.add_paragraph()
-        p.text = paragraph
+        p.text = item
         p.font.size = Pt(16)
         p.space_after = Pt(8)
-        
-        # Only add bullet if it's a complete thought (not a continuation)
-        if len(paragraph.split()) > 3 and paragraph[-1] in '.!?':
-            p.level = 0  # Add bullet point
-        else:
-            p.level = 1  # Sub-point without bullet
+        p.level = 0  # Always add bullet points since we pre-split properly
 
-def create_presentation(file_texts):
-    """Creates a PowerPoint presentation and returns it as a file object."""
-    template_path = "Ion.pptx"
-    if os.path.exists(template_path):
-        prs = Presentation(template_path)
-    else:
-        prs = Presentation()
+        # Handle text that's too long by splitting into multiple paragraphs
+        if len(item) > 120:
+            words = item.split()
+            current_line = words[0]
+            for word in words[1:]:
+                if len(current_line) + len(word) + 1 < 80:  # 80 char line limit
+                    current_line += " " + word
+                else:
+                    cont_p = text_frame.add_paragraph()
+                    cont_p.text = current_line
+                    cont_p.font.size = Pt(16)
+                    cont_p.space_after = Pt(8)
+                    cont_p.level = 1  # Continuation as sub-bullet
+                    current_line = word
+            if current_line:
+                cont_p = text_frame.add_paragraph()
+                cont_p.text = current_line
+                cont_p.font.size = Pt(16)
+                cont_p.space_after = Pt(8)
+                cont_p.level = 1
 
-    # Add Title Slide
-    slide_layout = prs.slide_layouts[0]  # Title Slide Layout
-    slide = prs.slides.add_slide(slide_layout)
+def create_presentation(file_texts: Dict[str, str]):
+    """Creates PowerPoint presentation with proper formatting."""
+    prs = Presentation("Ion.pptx") if os.path.exists("Ion.pptx") else Presentation()
+
+    # Title Slide
+    slide = prs.slides.add_slide(prs.slide_layouts[0])
     slide.shapes.title.text = "Vehicle Rental System - Summary Presentation"
     slide.placeholders[1].text = "Created by AI PPT Generator"
 
-    max_lines_per_slide = 6  # Maximum lines per slide
-    max_chars_per_line = 80  # Maximum characters per line
-
     for filename, text in file_texts.items():
+        # File title slide
+        title_slide = prs.slides.add_slide(prs.slide_layouts[5])
+        title_slide.shapes.title.text = f"Summary of {filename}"
+
+        # Process content with proper punctuation and bullet points
         structured_text = clean_text(text)
-        current_slide_text = []
-
-        # Add a Slide for Each File Title
-        file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
-        file_title_slide.shapes.title.text = f"Summary of {filename}"
-
-        # Group content into logical chunks for slides
-        current_chunk = []
-        char_count = 0
         
-        for paragraph in structured_text:
-            # Estimate if adding this paragraph would exceed slide limits
-            if (len(current_chunk) >= max_lines_per_slide or 
-                char_count + len(paragraph) > max_chars_per_line * max_lines_per_slide):
-                add_slide(prs, f"Key Points from {filename}", current_chunk)
-                current_chunk = []
-                char_count = 0
-            
-            current_chunk.append(paragraph)
-            char_count += len(paragraph)
-
-        # Add remaining content
-        if current_chunk:
-            add_slide(prs, f"Additional Info from {filename}", current_chunk)
+        # Split into slides with max 5 bullet points (to prevent overflow)
+        for i in range(0, len(structured_text), 5):
+            slide_title = (
+                f"Key Points from {filename}" 
+                if i == 0 else 
+                f"Continued Points from {filename}"
+            )
+            add_slide(
+                prs, 
+                slide_title,
+                structured_text[i:i+5]  # Fewer points per slide
+            )
 
     ppt_io = io.BytesIO()
     prs.save(ppt_io)
