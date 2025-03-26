@@ -9,16 +9,12 @@ def clean_text(text):
     if isinstance(text, list):
         text = "\n".join(text)
 
-    # Remove unwanted characters but retain full stops and newlines
+    # Remove unwanted characters but retain full stops, newlines, and numbers
     text = re.sub(r'[*#]', '', text)
-    text = re.sub(r'[^A-Za-z0-9.,\n\s]', '', text)
+    text = re.sub(r'[^A-Za-z0-9.,!?\n\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    # Split on newlines or full stops to preserve sentence boundaries
-    paragraphs = re.split(r'(?<=[.\n])', text)
-    structured_text = [para.strip() for para in paragraphs if para]
-
-    return structured_text
+    return text
 def add_slide(prs, title, content):
     """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
@@ -36,18 +32,25 @@ def add_slide(prs, title, content):
     text_frame.clear()
     text_frame.word_wrap = True  # Enable word wrapping
 
-    # Improved bullet point logic
-    for i, paragraph in enumerate(content):
+    # Combine content into a single string to better detect sentence boundaries
+    full_text = ' '.join(content)
+    
+    # Split into sentences based on punctuation
+    sentences = re.split(r'(?<=[.!?])\s+', full_text)
+    
+    for sentence in sentences:
+        if not sentence.strip():
+            continue
+            
         p = text_frame.add_paragraph()
-        p.text = paragraph
+        p.text = sentence.strip()
         p.font.size = Pt(16)
         p.space_after = Pt(8)
-
-        # Apply bullet point only if it's a numbered list item, starts a new sentence, or is the first paragraph
-        if re.match(r"^\d+\.", paragraph) or paragraph.endswith(".") or i == 0:
-            p.level = 0  # Apply bullet point (PowerPoint's default bullet)
-        else:
-            p.level = 1  # Indent it instead
+        p.level = 0  # Apply bullet point to each new sentence
+        
+        # For numbered items (like "1. Expand on Rubrics...")
+        if re.match(r'^\d+\.', sentence):
+            p.level = 0
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
