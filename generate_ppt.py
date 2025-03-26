@@ -12,17 +12,15 @@ def clean_text(text):
 
     # Remove unwanted characters but retain essential punctuation
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    # Retain letters, numbers, punctuation, and common symbols
-    text = re.sub(r'[^\w\s.,:;!?\'"()-]', '', text)
+    text = re.sub(r'[^\w\s.,:;!?\'"-]', '', text)  # Retain letters, numbers, and essential punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Split into paragraphs based on line breaks
+    # Split into paragraphs or thoughts based on line breaks
     paragraphs = text.split("\n")
     structured_text = [para.strip() for para in paragraphs if para]
 
     return structured_text
-
 
 def add_slide(prs, title, content):
     """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
@@ -41,14 +39,13 @@ def add_slide(prs, title, content):
     text_frame.clear()
     text_frame.word_wrap = True  # Enable word wrapping
 
-    # Add bullet points for each sentence/idea
-    for sentence in content:
+    # Add bullet points for each new thought
+    for paragraph in content:
         p = text_frame.add_paragraph()
-        p.text = sentence.strip()  # Remove leading/trailing whitespace
+        p.text = paragraph
         p.font.size = Pt(16)  # Slightly smaller font for better fit
         p.space_after = Pt(8)  # Adjust spacing for readability
         p.level = 0  # PowerPoint's default bullet
-
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
@@ -76,17 +73,20 @@ def create_presentation(file_texts):
         file_title_slide.shapes.title.text = f"Summary of {filename}"  # More descriptive title
 
         for paragraph in structured_text:
-            # Split large paragraphs into sentences
-            sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|!)\s', paragraph)  #splits paragraph into sentences
-            for sentence in sentences:
-                if sentence.strip():  # Ensure non-empty sentences
-                    # Add the sentence to the current slide text
-                    current_slide_text.append(sentence.strip())
+            # Split large paragraphs into smaller chunks
+            wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
+            for wrapped_line in wrapped_lines:
+                # Split sentences based on full stops or double newlines
+                sentences = re.split(r'(?<=[.!?])\s+|\n\n', wrapped_line)
+                for sentence in sentences:
+                    if sentence.strip():  # Ensure non-empty sentences
+                        # Add the sentence to the current slide text
+                        current_slide_text.append(sentence.strip())
 
-                    # If the slide is full, add a new slide
-                    if len(current_slide_text) == max_lines_per_slide:
-                        add_slide(prs, f"Key Points from {filename}", current_slide_text)
-                        current_slide_text = []
+                        # If the slide is full, add a new slide
+                        if len(current_slide_text) == max_lines_per_slide:
+                            add_slide(prs, f"Key Points from {filename}", current_slide_text)
+                            current_slide_text = []
 
         # Add remaining text to a new slide
         if current_slide_text:
