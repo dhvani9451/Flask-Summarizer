@@ -30,9 +30,15 @@ def clean_text(text):
 # ✅ Function to generate summary using Gemini AI
 def generate_summary(text):
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")  # ✅ Use Gemini AI model
+        model = genai.GenerativeModel("gemini-2.0-flash")  # Use Gemini AI model
         response = model.generate_content(text)
-        return response.text.strip() if response.text else "No summary generated."
+        summary = response.text.strip() if response.text else "No summary generated."
+
+        # Ensure the summary ends with a full stop if missing
+        if not summary.endswith("."):
+            summary += "."
+
+        return summary
     except Exception as e:
         return f"Error generating summary: {str(e)}"
 
