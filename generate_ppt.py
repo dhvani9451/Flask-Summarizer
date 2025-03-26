@@ -6,7 +6,7 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text while retaining full stops and numbered lists."""
     if isinstance(text, list):
         text = "\n".join(text)
 
@@ -15,8 +15,8 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Split into paragraphs or thoughts based on line breaks
-    paragraphs = text.split("\n")
+    # Retain numbered lists (e.g., "1.", "2.") and split into paragraphs
+    paragraphs = re.split(r'(?<=\.)\s+|\n', text)  # Split by full stops or newlines
     structured_text = [para.strip() for para in paragraphs if para]
 
     return structured_text
@@ -45,14 +45,13 @@ def add_slide(prs, title, content):
         p.font.size = Pt(16)  # Slightly smaller font for better fit
         p.space_after = Pt(8)  # Adjust spacing for readability
 
-        # ✅ Apply bullet only if:
+        # Apply bullet only if:
         # 1. It's the first line of the slide, or
-        # 2. The previous line ended with a full stop (new thought)
-        if i == 0 or content[i - 1].endswith("."):
-            p.level = 0  # ✅ PowerPoint's default bullet
+        # 2. The previous line ended with a full stop or is a numbered list
+        if i == 0 or content[i - 1].endswith(".") or re.match(r'^\d+\.', paragraph):
+            p.level = 0  # PowerPoint's default bullet
         else:
-            p.level = 1  # ✅ No bullet for wrapped lines or continuous text
-
+            p.level = 1  # No bullet for wrapped lines or continuous text
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
     template_path = "Ion.pptx"
