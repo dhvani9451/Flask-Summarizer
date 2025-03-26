@@ -4,39 +4,50 @@ import os
 import re
 import google.generativeai as genai
 
-# ✅ Import the create_presentation function
+# Import the create_presentation function
 from generate_ppt import create_presentation
 
-# ✅ Configure Gemini API securely
-genai.configure(api_key=os.getenv("AIzaSyC5nMYSC6oPwbIkPGWhwKfUnQLqvUf1oR4"))  # ✅ Use environment variable
+# Configure Gemini API securely
+api_key = os.getenv("AIzaSyC5nMYSC6oPwbIkPGWhwKfUnQLqvUf1oR4")
+if not api_key:
+    print("API key not found in environment variables.")
+else:
+    genai.configure(api_key=api_key)
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # ✅ Enable CORS for all origins
+CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all origins
 
-# ✅ Function to clean text (removes special characters)
+# Function to clean text using refined heuristic-based sentence splitting
 def clean_text(text):
     if isinstance(text, list):
-        text = "\n".join(text)  # ✅ Properly format list texts
+        text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)
     text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    lines = text.split(". ")
-    structured_text = [line.strip() for line in lines if line]
+    # Refined heuristic-based sentence splitting
+    sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s', text)
+    structured_text = [sentence.strip() for sentence in sentences if sentence]
 
     return structured_text
 
-# ✅ Function to generate summary using Gemini AI
+# Function to generate summary using Gemini AI
 def generate_summary(text):
     try:
-        model = genai.GenerativeModel("gemini-2.0-flash")  # ✅ Use Gemini AI model
+        model = genai.GenerativeModel("gemini-2.0-flash")  # Use Gemini AI model
         response = model.generate_content(text)
-        return response.text.strip() if response.text else "No summary generated."
+        summary = response.text.strip() if response.text else "No summary generated."
+
+        # Log the raw summary for diagnostics
+        print("Raw Summary:", summary)
+
+        return summary
     except Exception as e:
+        print(f"Error generating summary: {e}")
         return f"Error generating summary: {str(e)}"
 
-# ✅ Flask route to generate and return PowerPoint file
+# Flask route to generate and return PowerPoint file
 @app.route('/generate-ppt', methods=['POST'])
 def generate_ppt():
     try:
@@ -45,22 +56,22 @@ def generate_ppt():
             return jsonify({"error": "No text data provided in request body"}), 400
 
         text = data.get("text", "")  # Using .get() to avoid KeyError
-        file_name = data.get("filename", "Summary") # get the filename or assign default
+        file_name = data.get("filename", "Summary")  # Get the filename or assign default
 
         if not text.strip():
             return jsonify({"error": "No valid text data provided."}), 400
 
-        # ✅ Process and clean summary text
+        # Process and clean summary text
         summary = generate_summary(text)
-        cleaned_summary = clean_text(summary)  # ✅ Clean before PPT generation
+        cleaned_summary = clean_text(summary)  # Clean before PPT generation
 
         # file_summaries format is a dictionary with file_name keys and text list
-        file_summaries = {file_name : cleaned_summary}
+        file_summaries = {file_name: cleaned_summary}
 
-        # ✅ Generate PowerPoint for the processed summary
+        # Generate PowerPoint for the processed summary
         ppt_file = create_presentation(file_summaries)
 
-        # ✅ Improved Error Handling and Logging
+        # Improved Error Handling and Logging
         try:
             return send_file(
                 ppt_file,
