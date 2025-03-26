@@ -3,6 +3,10 @@ from flask_cors import CORS
 import os
 import re
 import google.generativeai as genai
+import nltk
+
+# Ensure NLTK resources are available
+nltk.download('punkt')
 
 # Import the create_presentation function
 from generate_ppt import create_presentation
@@ -17,7 +21,7 @@ else:
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})  # Enable CORS for all origins
 
-# Function to clean text using refined heuristic-based sentence splitting
+# Function to clean text using NLTK for sentence splitting
 def clean_text(text):
     if isinstance(text, list):
         text = "\n".join(text)
@@ -26,8 +30,8 @@ def clean_text(text):
     text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    # Refined heuristic-based sentence splitting
-    sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s', text)
+    # Use NLTK to split text into sentences
+    sentences = nltk.tokenize.sent_tokenize(text)
     structured_text = [sentence.strip() for sentence in sentences if sentence]
 
     return structured_text
