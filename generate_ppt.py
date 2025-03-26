@@ -1,23 +1,22 @@
 from pptx import Presentation
-from pptx.util import Pt, Inches
+from pptx.util import Pt
 import io
 import textwrap
 import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text while retaining full stops and numbered lists."""
+    """Cleans and structures the extracted text using NLTK for sentence splitting."""
     if isinstance(text, list):
         text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
     text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
-    # Retain numbered lists (e.g., "1.", "2.") and split into paragraphs
-    paragraphs = re.split(r'(?<=\.)\s+|\n', text)  # Split by full stops or newlines
-    structured_text = [para.strip() for para in paragraphs if para]
+    # Use NLTK to split text into sentences
+    sentences = nltk.tokenize.sent_tokenize(text)
+    structured_text = [sentence.strip() for sentence in sentences if sentence]
 
     return structured_text
 
@@ -52,6 +51,7 @@ def add_slide(prs, title, content):
             p.level = 0  # PowerPoint's default bullet
         else:
             p.level = 1  # No bullet for wrapped lines or continuous text
+
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
     template_path = "Ion.pptx"
@@ -70,10 +70,6 @@ def create_presentation(file_texts):
     max_chars_per_line = 80  # Maximum characters per line
 
     for filename, text in file_texts.items():
-        # Debug: Print raw summary text
-        print(f"Raw summary for {filename}:")
-        print(text)
-
         structured_text = clean_text(text)
         current_slide_text = []
 
@@ -100,4 +96,3 @@ def create_presentation(file_texts):
     prs.save(ppt_io)
     ppt_io.seek(0)
     return ppt_io
-
