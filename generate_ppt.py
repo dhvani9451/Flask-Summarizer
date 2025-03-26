@@ -6,23 +6,44 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text while preserving meaningful structure."""
     if isinstance(text, list):
         text = "\n".join(text)
 
-    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
-    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
-
-    # Split into paragraphs or thoughts based on line breaks
-    paragraphs = text.split("\n")
-    structured_text = [para.strip() for para in paragraphs if para]
-
+    # Remove markdown characters but preserve most punctuation
+    text = re.sub(r'[*#]', '', text)
+    
+    # Normalize whitespace (convert multiple spaces/tabs to single space)
+    text = re.sub(r'[ \t]+', ' ', text)
+    
+    # Normalize line breaks (convert multiple newlines to double newlines)
+    text = re.sub(r'\n\s*\n', '\n\n', text.strip())
+    
+    # Split into paragraphs based on double newlines
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    
+    # Further split long paragraphs into coherent chunks
+    structured_text = []
+    for para in paragraphs:
+        # Split at sentence boundaries if paragraph is too long
+        if len(para) > 120:
+            sentences = re.split(r'(?<=[.!?])\s+', para)
+            current_chunk = []
+            for sentence in sentences:
+                if sum(len(s) for s in current_chunk) + len(sentence) < 100:
+                    current_chunk.append(sentence)
+                else:
+                    structured_text.append(' '.join(current_chunk))
+                    current_chunk = [sentence]
+            if current_chunk:
+                structured_text.append(' '.join(current_chunk))
+        else:
+            structured_text.append(para)
+    
     return structured_text
 
 def add_slide(prs, title, content):
-    """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
+    """Adds a slide with proper bullet point structure."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
@@ -36,15 +57,20 @@ def add_slide(prs, title, content):
     content_shape = slide.shapes.placeholders[1]
     text_frame = content_shape.text_frame
     text_frame.clear()
-    text_frame.word_wrap = True  # Enable word wrapping
+    text_frame.word_wrap = True
 
-    # Add bullet points for each new thought
+    # Add content with bullet points only for main points
     for paragraph in content:
         p = text_frame.add_paragraph()
         p.text = paragraph
-        p.font.size = Pt(16)  # Slightly smaller font for better fit
-        p.space_after = Pt(8)  # Adjust spacing for readability
-        p.level = 0  # PowerPoint's default bullet
+        p.font.size = Pt(16)
+        p.space_after = Pt(8)
+        
+        # Only add bullet if it's a complete thought (not a continuation)
+        if len(paragraph.split()) > 3 and paragraph[-1] in '.!?':
+            p.level = 0  # Add bullet point
+        else:
+            p.level = 1  # Sub-point without bullet
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
@@ -69,22 +95,26 @@ def create_presentation(file_texts):
 
         # Add a Slide for Each File Title
         file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
-        file_title_slide.shapes.title.text = f"Summary of {filename}"  # More descriptive title
+        file_title_slide.shapes.title.text = f"Summary of {filename}"
 
+        # Group content into logical chunks for slides
+        current_chunk = []
+        char_count = 0
+        
         for paragraph in structured_text:
-            # Split large paragraphs into smaller chunks
-            wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
-            for wrapped_line in wrapped_lines:
-                current_slide_text.append(wrapped_line)
+            # Estimate if adding this paragraph would exceed slide limits
+            if (len(current_chunk) >= max_lines_per_slide or 
+                char_count + len(paragraph) > max_chars_per_line * max_lines_per_slide):
+                add_slide(prs, f"Key Points from {filename}", current_chunk)
+                current_chunk = []
+                char_count = 0
+            
+            current_chunk.append(paragraph)
+            char_count += len(paragraph)
 
-                # If the slide is full, add a new slide
-                if len(current_slide_text) == max_lines_per_slide:
-                    add_slide(prs, f"Key Points from {filename}", current_slide_text)
-                    current_slide_text = []
-
-        # Add remaining text to a new slide
-        if current_slide_text:
-            add_slide(prs, f"Additional Info from {filename}", current_slide_text)
+        # Add remaining content
+        if current_chunk:
+            add_slide(prs, f"Additional Info from {filename}", current_chunk)
 
     ppt_io = io.BytesIO()
     prs.save(ppt_io)
