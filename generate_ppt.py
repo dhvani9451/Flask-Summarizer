@@ -80,6 +80,7 @@ def create_presentation(file_texts):
                 sentences = re.split(r'(?<=[.!?])\s+|\n\n', wrapped_line)
                 for sentence in sentences:
                     if sentence.strip():  # Ensure non-empty sentences
+                        # Add the sentence to the current slide text
                         current_slide_text.append(sentence.strip())
 
                         # If the slide is full, add a new slide
