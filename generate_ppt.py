@@ -9,16 +9,16 @@ def clean_text(text):
     if isinstance(text, list):
         text = "\n".join(text)
 
+    # Remove unwanted characters but retain full stops and newlines
     text = re.sub(r'[*#]', '', text)
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)
+    text = re.sub(r'[^A-Za-z0-9.,\n\s]', '', text)
     text = re.sub(r'\s+', ' ', text).strip()
 
-    # Split on headings followed by a colon and some text
-    paragraphs = re.split(r'([A-Za-z\s]+:.*)', text)
+    # Split on newlines or full stops to preserve sentence boundaries
+    paragraphs = re.split(r'(?<=[.\n])', text)
     structured_text = [para.strip() for para in paragraphs if para]
 
     return structured_text
-
 def add_slide(prs, title, content):
     """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
@@ -43,11 +43,11 @@ def add_slide(prs, title, content):
         p.font.size = Pt(16)
         p.space_after = Pt(8)
 
-        # Apply bullet point only if it's a numbered list item or the first paragraph or paragraph starting with keywords.
-        if re.match(r"^\d+\.", paragraph) or i == 0 or paragraph.lower().startswith(("strengths", "areas for improvement")): #starts with number . or is first paragraph or is a heading
+        # Apply bullet point only if it's a numbered list item, starts a new sentence, or is the first paragraph
+        if re.match(r"^\d+\.", paragraph) or paragraph.endswith(".") or i == 0:
             p.level = 0  # Apply bullet point (PowerPoint's default bullet)
         else:
-            p.level = 1 #Indent it instead
+            p.level = 1  # Indent it instead
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
