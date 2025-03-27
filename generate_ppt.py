@@ -5,26 +5,20 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text while preserving punctuation or ensuring logical splitting."""
+    """Cleans and structures the extracted text while preserving punctuation."""
     if isinstance(text, list):
-        text = " ".join(text)
+        text = "\n".join(text)
     
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
     text = re.sub(r'[^A-Za-z0-9.,!?;:\-\s]', '', text)  # Keep relevant punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
     
-    # Check if punctuation exists in text
-    if any(p in text for p in ['.', ',', ';', ':']):
-        paragraphs = re.split(r'(?<=[.,;:])\s+', text)  # Split based on punctuation
-    else:
-        words = text.split()  # Split by spaces if no punctuation
-        paragraph_size = 12  # Approximate sentence length
-        paragraphs = [" ".join(words[i:i + paragraph_size]) for i in range(0, len(words), paragraph_size)]
-    
+    # Split text into paragraphs based on full stops and commas
+    paragraphs = re.split(r'(?<=[.,])\s+', text)
     structured_text = [para.strip() for para in paragraphs if para]
+    
     return structured_text
-
 
 def add_slide(prs, title, content):
     """Adds a slide ensuring bullet points are applied to full paragraphs while preventing overflow."""
@@ -44,8 +38,8 @@ def add_slide(prs, title, content):
     max_chars_per_slide = 600  # Limit characters per slide
     current_text = ""
     
-    for index, paragraph in enumerate(content, start=1):
-        temp_text = f"{index}. {paragraph.strip()}"
+    for paragraph in content:
+        temp_text = paragraph.strip()
         if len(current_text) + len(temp_text) > max_chars_per_slide:
             break  # Stop adding text if exceeding limit
         
