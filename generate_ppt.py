@@ -14,9 +14,11 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
     
-    # Split text into paragraphs based only on full stops
-    paragraphs = re.split(r'(?<=[.])\s+', text)
+    # Ensure full stops are preserved and split text correctly
+    paragraphs = re.split(r'(?<=\.)\s+', text)
     structured_text = [para.strip() for para in paragraphs if para]
+    
+    print("Debug - Structured Text:", structured_text)  # Debugging
     
     return structured_text
 
