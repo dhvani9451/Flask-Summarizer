@@ -6,19 +6,30 @@ import re
 import os
 
 def clean_text(text):
-    """Cleans and structures the extracted text."""
+    """Cleans and structures the extracted text, preserving punctuation and merging split lines."""
     if isinstance(text, list):
         text = "\n".join(text)
 
-    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
-    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
-    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
+    # Keep letters, numbers, whitespace, and common punctuation
+    text = re.sub(r'[^\w\s.,!?;:\'’"()%#-]', '', text)  # Modified regex
+    text = re.sub(r'\s+', ' ', text).strip()  # Collapse multiple spaces
+    text = re.sub(r'\n+', '\n', text)  # Collapse multiple newlines
 
-    # Split into paragraphs or thoughts based on line breaks
     paragraphs = text.split("\n")
-    structured_text = [para.strip() for para in paragraphs if para]
+    structured_text = []
+    current_para = []
 
+    for line in paragraphs:
+        line = line.strip()
+        if not line:
+            continue
+        # Merge lines that are part of the same sentence
+        if current_para and (line[0].islower() or not current_para[-1].endswith(('.', '!', '?'))):
+            current_para[-1] += ' ' + line
+        else:
+            current_para.append(line)
+    
+    structured_text = current_para
     return structured_text
 
 def add_slide(prs, title, content):
