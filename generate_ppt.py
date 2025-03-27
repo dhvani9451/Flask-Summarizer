@@ -1,120 +1,91 @@
-import re
-import io
-import os
-import textwrap
 from pptx import Presentation
-from pptx.util import Pt
+from pptx.util import Pt, Inches
+import io
+import textwrap
+import re
+import os
 
-def intelligent_text_processing(text):
-    """
-    Comprehensive text processing with advanced sentence detection.
-    
-    Key Features:
-    - Preserve all original punctuation
-    - Detect complete sentences intelligently
-    - Handle complex text structures
-    """
-    # Convert list to string if needed
+def clean_text(text):
+    """Cleans and structures the extracted text."""
     if isinstance(text, list):
-        text = " ".join(text)
-    
-    # Advanced sentence splitting regex
-    # Handles abbreviations, quotes, and complex sentence structures
-    sentence_pattern = r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s+'
-    
-    # Split into sentences while preserving punctuation
-    sentences = re.split(sentence_pattern, text)
-    
-    # Clean and validate sentences
-    processed_sentences = []
-    for sentence in sentences:
-        # Trim whitespace, preserve punctuation
-        sentence = sentence.strip()
-        
-        # Capitalize first letter if not already capitalized
-        if sentence and not sentence[0].isupper():
-            sentence = sentence[0].upper() + sentence[1:]
-        
-        if sentence:
-            processed_sentences.append(sentence)
-    
-    return processed_sentences
+        text = "\n".join(text)
+
+    text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
+    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
+    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
+    text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
+
+    # Split into paragraphs or thoughts based on line breaks
+    paragraphs = text.split("\n")
+    structured_text = [para.strip() for para in paragraphs if para]
+
+    return structured_text
 
 def add_slide(prs, title, content):
-    """
-    Enhanced slide creation with intelligent, punctuation-aware bullet points.
-    """
-    slide_layout = prs.slide_layouts[1]
+    """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
+    slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
-    # Title formatting
+    # Set slide title
     title_shape = slide.shapes.title
     title_shape.text = title
     title_shape.text_frame.paragraphs[0].font.bold = True
     title_shape.text_frame.paragraphs[0].font.size = Pt(28)
 
-    # Content area preparation
+    # Set slide content
     content_shape = slide.shapes.placeholders[1]
     text_frame = content_shape.text_frame
     text_frame.clear()
-    text_frame.word_wrap = True
+    text_frame.word_wrap = True  # Enable word wrapping
 
-    # Intelligent bullet point generation
+    # Add bullet points for each new thought
     for paragraph in content:
-        # Detect and process sentences
-        sentences = intelligent_text_processing(paragraph)
-        
-        for sentence in sentences:
-            # Add each sentence as a bullet point
-            p = text_frame.add_paragraph()
-            p.text = sentence
-            p.font.size = Pt(16)
-            p.space_after = Pt(8)
-            p.level = 0  # Consistent bullet style
+        p = text_frame.add_paragraph()
+        p.text = paragraph
+        p.font.size = Pt(16)  # Slightly smaller font for better fit
+        p.space_after = Pt(8)  # Adjust spacing for readability
+        p.level = 0  # PowerPoint's default bullet
 
 def create_presentation(file_texts):
-    """
-    Create a PowerPoint with enhanced, context-aware text processing.
-    """
-    # Template or new presentation
+    """Creates a PowerPoint presentation and returns it as a file object."""
     template_path = "Ion.pptx"
-    prs = Presentation(template_path) if os.path.exists(template_path) else Presentation()
+    if os.path.exists(template_path):
+        prs = Presentation(template_path)
+    else:
+        prs = Presentation()
 
-    # Title slide
-    slide_layout = prs.slide_layouts[0]
+    # Add Title Slide
+    slide_layout = prs.slide_layouts[0]  # Title Slide Layout
     slide = prs.slides.add_slide(slide_layout)
-    slide.shapes.title.text = "Comprehensive Summary Presentation"
-    slide.placeholders[1].text = "Generated with Advanced Text Processing"
+    slide.shapes.title.text = "Vehicle Rental System - Summary Presentation"
+    slide.placeholders[1].text = "Created by AI PPT Generator"
 
-    # Processing parameters
-    max_lines_per_slide = 6
-    max_chars_per_line = 80
+    max_lines_per_slide = 6  # Maximum lines per slide
+    max_chars_per_line = 80  # Maximum characters per line
 
     for filename, text in file_texts.items():
-        # File title slide
-        file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])
-        file_title_slide.shapes.title.text = f"Summary of {filename}"
-
-        # Prepare slide content
+        structured_text = clean_text(text)
         current_slide_text = []
-        
-        # Wrap text maintaining readability
-        wrapped_lines = textwrap.wrap(text, width=max_chars_per_line)
-        
-        for wrapped_line in wrapped_lines:
-            if wrapped_line.strip():
-                current_slide_text.append(wrapped_line.strip())
 
-                # New slide when current is full
+        # Add a Slide for Each File Title
+        file_title_slide = prs.slides.add_slide(prs.slide_layouts[5])  # Title Only Layout
+        file_title_slide.shapes.title.text = f"Summary of {filename}"  # More descriptive title
+
+        for paragraph in structured_text:
+            # Split large paragraphs into smaller chunks
+            wrapped_lines = textwrap.wrap(paragraph, width=max_chars_per_line)
+            for wrapped_line in wrapped_lines:
+                current_slide_text.append(wrapped_line)
+
+                # If the slide is full, add a new slide
                 if len(current_slide_text) == max_lines_per_slide:
                     add_slide(prs, f"Key Points from {filename}", current_slide_text)
                     current_slide_text = []
 
-        # Final slide for remaining content
+        # Add remaining text to a new slide
         if current_slide_text:
-            add_slide(prs, f"Additional Details from {filename}", current_slide_text)
+            add_slide(prs, f"Additional Info from {filename}", current_slide_text)
 
-    # Save presentation
     ppt_io = io.BytesIO()
     prs.save(ppt_io)
     ppt_io.seek(0)
