@@ -11,7 +11,7 @@ def clean_text(text):
         text = "\n".join(text)
 
     text = re.sub(r'[*#]', '', text)  # Remove unwanted characters
-    text = re.sub(r'[^A-Za-z0-9.,\s]', '', text)  # Keep only letters, numbers, and punctuation
+    text = re.sub(r'[^A-Za-z0-9.,!?;\s]', '', text)  # Keep only letters, numbers, and punctuation
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
 
@@ -22,7 +22,7 @@ def clean_text(text):
     return structured_text
 
 def add_slide(prs, title, content):
-    """Adds a slide ensuring bullet points are applied to new thoughts and text fits within the textbox."""
+    """Adds a slide ensuring bullet points are applied to logical sentences and punctuation marks are retained."""
     slide_layout = prs.slide_layouts[1]  # Title & Content layout
     slide = prs.slides.add_slide(slide_layout)
 
@@ -38,13 +38,16 @@ def add_slide(prs, title, content):
     text_frame.clear()
     text_frame.word_wrap = True  # Enable word wrapping
 
-    # Add bullet points for each new thought
+    # Add bullet points for each logical sentence
     for paragraph in content:
-        p = text_frame.add_paragraph()
-        p.text = paragraph
-        p.font.size = Pt(16)  # Slightly smaller font for better fit
-        p.space_after = Pt(8)  # Adjust spacing for readability
-        p.level = 0  # PowerPoint's default bullet
+        sentences = re.split(r'(?<=[.!?])\s+', paragraph)  # Split by punctuation marks
+        for sentence in sentences:
+            if sentence.strip() and sentence[0].isupper():  # Ensure the sentence starts with a capital letter
+                p = text_frame.add_paragraph()
+                p.text = sentence.strip()
+                p.font.size = Pt(16)  # Slightly smaller font for better fit
+                p.space_after = Pt(8)  # Adjust spacing for readability
+                p.level = 0  # PowerPoint's default bullet
 
 def create_presentation(file_texts):
     """Creates a PowerPoint presentation and returns it as a file object."""
