@@ -1,8 +1,8 @@
 from pptx import Presentation
-from pptx.util import Pt, Inches
+from pptx.util import Pt
 import io
-import re
 import os
+import re
 
 def clean_text(text):
     """Cleans and structures the extracted text while preserving punctuation."""
@@ -14,8 +14,8 @@ def clean_text(text):
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     text = re.sub(r'\n+', '\n', text)  # Remove extra newlines
     
-    # Split text into paragraphs based on full stops and commas
-    paragraphs = re.split(r'(?<=[.,])\s+', text)
+    # Split text into paragraphs based on full stops
+    paragraphs = re.split(r'(?<=[.])\s+', text)
     structured_text = [para.strip() for para in paragraphs if para]
     
     return structured_text
