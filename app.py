@@ -32,7 +32,7 @@ def generate_summary(text):
     try:
         model = genai.GenerativeModel("gemini-2.0-flash")  # ✅ Use Gemini AI model
         response = model.generate_content(text)
-        return response.text.strip() if response.text else "No summary generated."
+        return response.text.strip() if response and response.text else "No summary generated."
     except Exception as e:
         return f"Error generating summary: {str(e)}"
 
@@ -44,36 +44,34 @@ def generate_ppt():
         if not data or 'text' not in data:
             return jsonify({"error": "No text data provided in request body"}), 400
 
-        text = data.get("text", "")  # Using .get() to avoid KeyError
-        file_name = data.get("filename", "Summary") # get the filename or assign default
+        text = data.get("text", "").strip()  # Ensure text is stripped of whitespace
+        file_name = data.get("filename", "Summary")  # Get the filename or assign default
 
-        if not text.strip():
+        if not text:
             return jsonify({"error": "No valid text data provided."}), 400
 
         # ✅ Process and clean summary text
         summary = generate_summary(text)
-        cleaned_summary = clean_text(summary)  # ✅ Clean before PPT generation
+        cleaned_summary = clean_text(summary)  # Clean before PPT generation
+
+        if not cleaned_summary:  # Check if cleaned_summary is empty
+            return jsonify({"error": "Generated summary is empty."}), 400
 
         # file_summaries format is a dictionary with file_name keys and text list
-        file_summaries = {file_name : cleaned_summary}
+        file_summaries = {file_name: cleaned_summary}
 
         # ✅ Generate PowerPoint for the processed summary
         ppt_file = create_presentation(file_summaries)
 
-        # ✅ Improved Error Handling and Logging
-        try:
-            return send_file(
-                ppt_file,
-                mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
-                as_attachment=True,
-                download_name="AI_Summary_Presentation.pptx"
-            )
-        except Exception as e:
-            print(f"Error sending file: {e}")
-            return jsonify({"error": f"Error sending file: {str(e)}"}), 500
+        return send_file(
+            ppt_file,
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            as_attachment=True,
+            download_name="AI_Summary_Presentation.pptx"
+        )
     except Exception as e:
         print(f"Error in generate_ppt function: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)  # Ensure the app is accessible
